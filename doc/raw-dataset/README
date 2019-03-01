@@ -1,0 +1,29 @@
+Explanation of the raw data used in the paper:
+   VEWS: A Wikipedia Vandal Early Warning System
+   Srijan Kumar, Francesca Spezzano, V. S. Subrahmanian
+   Proceedings of SIGKDD 2015.
+
+If you have any questions or comments, we would love to hear from you!
+
+-- Edit Article Hop DB -- 
+One zipped file for the good users' edit pairs and one for the bad users' edit pairs:
+edit_article_hop_bad_db.csv.gz
+and
+edit_article_hop_good_db.csv.gz
+
+-- User Log Dataset --
+- normal_user_patters_new.csv: This file contains one line for each non-vandal user, with his consecutive edits converted to appropriate codes from Table 1
+- vandal_user_patterns_new.csv: Same as above, but for vandal users
+- normal_user_patterns_wo_rev_new.csv: Same as the normal data file above, but here, we ignore the reversion feature (for experiments without reversion, e.g. figure 5)
+- vandal_user_patterns_wo_rev_new.csv: Same as above, but for vandal users.
+- codes.txt: This will to understand the different terms in the above four files.
+
+Please note that it is simply the extraction of the features from consecutive edits, without labels on which user and which edit pair it belongs to.
+
+-- Edited Article Hop DB --
+distance_between_pairs.zip
+
+== Codes ==
+Autoencoder: autoencoder_code.py
+
+getUserContribution.py: This file can be used to get more data from the Wikipedia API.

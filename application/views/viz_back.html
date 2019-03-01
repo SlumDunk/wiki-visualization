@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Wiki Visualisation Page</title>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./public/css/jquery-ui.css">
+    <link rel="stylesheet" href="./public/css/mysite.css">
+
+    <!--Scripts Refferences-->
+    <script src="./public/js/jquery-1.12.4.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+
+    <script src="./public/js/jquery-ui.js"></script>
+    <script type="text/javascript" src="./public/js/d3.v4.min.js"></script>
+    <script src="./public/js/numeric-1.2.6.js"></script>
+    <script src="./public/js/jsfeat.js"></script>
+    <script src="./public/js/d3-lasso.min.js"></script>
+    <script src="https://d3js.org/d3-path.v1.min.js"></script>
+    <script src="./public/js/lalolib.js"></script>
+    <script src="./public/js/math.min.js"></script>
+
+    <script src="./public/customjs/userFeaturs.js"></script>
+    <script src="./public/customjs/scatterPlot.js"></script>
+    <script src="./public/customjs/timeLine.js"></script>
+    <script src="./public/customjs/heatMap.js"></script>
+    <script src="./public/customjs/PageScatterPlot.js"></script>
+    <style type="text/css">
+
+        .modal-lg {
+            width: 1100px;
+        }
+
+        .zoomBtn {
+            padding-top: 20px;
+        }
+
+        div.tooltip {
+            position: relative;
+            text-align: center;
+            width: 250px;
+            height: 28px;
+            padding: 2px;
+            font: 10px sans-serif;
+            background: lightsteelblue;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+    </style>
+
+    <script type="text/javascript">
+
+        var globalData;
+        var USER_TYPE = "Vandal";
+        var min_edits = 2;
+        var timeRange;
+        var x, y;
+        var dimensionFlag = false;
+        var userClusterFlag = false;
+        var hideUserFlag = false;
+        var labelDiv;
+        var svdType;
+
+        function registerClicks() {
+            $("#scatterPlot_1_big").on("click", function () {
+
+                $("#scatterPlot_big").remove();
+                $("#modal_body").append("<div id='scatterPlot_big' class='scatterPlot'></div>");
+                console.log("Log");
+                console.log(globalData.sc_1);
+                ScatterPlot(globalData.sc_1, "scatterPlot_big", "crsVsCrv", 1000, 600);
+            });
+
+
+            $("#scatterPlot_2_big").on("click", function () {
+
+                $("#scatterPlot_big").remove();
+                $("#modal_body").append("<div id='scatterPlot_big' class='scatterPlot'></div>");
+                ScatterPlot(globalData.sc_1, "scatterPlot_big", "CrnVsCrm", 1000, 600);
+            });
+
+            $("#scatterPlot_3_big").on("click", function () {
+
+                $("#scatterPlot_big").remove();
+                $("#modal_body").append("<div id='scatterPlot_big' class='scatterPlot'></div>");
+                ScatterPlot(globalData.sc_1, "scatterPlot_big", "CrsVsCrvs", 1000, 600);
+            });
+
+            $("#scatterPlot_4_big").on("click", function () {
+
+                $("#scatterPlot_big").remove();
+                $("#modal_body").append("<div id='scatterPlot_big' class='scatterPlot'></div>");
+                ScatterPlot(globalData.sc_1, "scatterPlot_big", "CrsmVsCrvm", 1000, 600);
+            });
+
+            $("#scatterPlot_5_big").on("click", function () {
+
+                $("#scatterPlot_big").remove();
+                $("#modal_body").append("<div id='scatterPlot_big' class='scatterPlot'></div>");
+                ScatterPlot(globalData.sc_1, "scatterPlot_big", "EditsVsReverts", 1000, 600);
+            });
+
+        }
+
+
+        $(document).ready(function () {
+
+
+            registerClicks();
+            timeRange = new Date(2013, 11, 30) - new Date(2013, 11, 1);
+            timeRange = millisToMinutesAndSeconds(timeRange);
+
+            $("#slider-vertical").slider({
+                orientation: "horizontal",
+                range: "min",
+                min: 0,
+                max: 100,
+                value: 60,
+                slide: function (event, ui) {
+                    $("#amount").val(ui.value);
+                    min_edits = ui.value;
+                }
+            });
+            $("#amount").val($("#slider-vertical").slider("value"));
+            //$( "#dimensionRange" ).val( globalData.sc_1.length-1 );
+
+
+            $("input").on("click", function () {
+
+                var type = $("input:checked").val();
+                var type2 = $("input:checkbox:not(:checked)").val();
+
+                var selected = [];
+                $(' input:checked').each(function () {
+                    selected.push($(this).attr('value'));
+                });
+                console.log("length: " + selected.length);
+                if (selected.length < 1) {
+                    USER_TYPE = "Vandal";
+                } else if (selected.length > 1) {
+                    USER_TYPE = "Both";
+                } else {
+                    USER_TYPE = selected[0];
+                }
+
+
+            });
+
+            $("#usersEditingSamePage").on("click", function () {
+                if (!hideUserFlag) {
+                    hideUserFlag = true;
+                    if (pagesEditedBySameUsers.size != 0) {
+
+                        var a = [];
+                        var allCircles = d3.selectAll("#scatterPlot circle");
+                        for (var i = 0; i < allCircles._groups[0].length; i++) {
+                            allCircles._groups[0][i].style.display = "none";
+                        }
+                        pagesEditedBySameUsers.forEach(function (page) {
+
+                            var details = page.split("-");
+                            //console.log(details[1]);
+                            a.push(d3.select("#circleId_" + details[0]));
+                            var c = d3.selectAll("#circleId_" + details[0]);
+                            for (var i = 0; i < c.size(); i++) {
+                                c._groups[0][i].setAttribute("r", "4");
+                                c._groups[0][i].setAttribute("style", "fill:" + details[1]);
+                                c._groups[0][i].style.display = "table";
+                            }
+                        })
+                    }
+                } else {
+                    hideUserFlag = false;
+                    var allCircles = d3.selectAll("#scatterPlot circle");
+                    for (var i = 0; i < allCircles._groups[0].length; i++) {
+                        allCircles._groups[0][i].style.display = "table";
+                    }
+                }
+            });
+            $("#generateLabel").on("click", function () {
+                var clusterText = d3.select("#hulls text");
+                if (clusterText._groups[0][0] == null)
+                    generateLabels();
+                else
+                    console.log("labels already generated");
+            });
+            $("#labelToggle").on("click", function () {
+                var labels = d3.selectAll("#heatMapContainer text");
+                if (labels._groups[0].length != 0) {
+                    $(labels._groups[0]).toggle("slow");
+                }
+            });
+            $("#dimensionSubmit").on("click", function () {
+                x = $("#x").val();
+                y = $("#y").val();
+                if ((x >= 0 && x < globalData.sc_1.length) && (y >= 0 && y < globalData.sc_1.length)) {
+                    setXandYvalues(x, y);
+                    const margin = {top: 40, right: 40, bottom: 40, left: 40},
+                        width = 1260 - margin.left - margin.right,
+                        height = 420 - margin.top - margin.bottom,
+                        gridSize = Math.floor(width / 24),
+                        legendElementWidth = gridSize * 2,
+                        buckets = 9;
+                    var each;
+                    var heatMapStart = height / 2;
+                    randomFlag = false;
+                    userClusterFlag = false;
+                    $("#heatMap").remove();
+                    $("#heatMapContainer").append("<div id='heatMap'>");
+
+                    var svdOutput;
+                    var cleanObject = getSvdObject();
+                    const svg = d3.select("#heatMap").append("svg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom);
+                    var g = svg.append("g")
+                        .attr("transform", "translate(" + margin.left + "," + margin.top + "), scale(1,1)");
+                    svg.svg = svg;
+                    svg.g = g;
+
+                    pageScatterPlotNew(cleanObject.svdOutPut, cleanObject.svdPages, svg);
+                    cleanObject = Object.assign([], []);
+                } else {
+                    alert("Select a number from 0 to " + (globalData.sc_1.length - 1) + ".");
+                }
+            });
+
+            $.ajax({
+                type: 'POST',
+                url: 'application/controllers/UserController.php',
+                success: function (data) {
+                    console.log(data);
+                    var data = featureOne(JSON.parse(data));
+                    console.log(data);
+                    globalData = data;
+                    userClusterFlag = false;
+                    var cleanObject = ungroupObjects(data.sc_1);
+                    const margin = {top: 40, right: 40, bottom: 40, left: 40},
+                        width = 1260 - margin.left - margin.right,
+                        height = 420 - margin.top - margin.bottom,
+
+                        gridSize = Math.floor(width / 24),
+                        legendElementWidth = gridSize * 2,
+                        buckets = 9;
+                    var each;
+                    var heatMapStart = height / 2;
+
+
+                    const svg = d3.select("#heatMap").append("svg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                    ;
+                    setLabelDiv();
+                    var g = svg.append("g")
+                        .attr("transform", "translate(" + margin.left + "," + margin.top + "), scale(1,1)");
+                    ScatterPlot(data.sc_1, "scatterPlot_1", "crsVsCrv", 100, 200);
+                    ScatterPlot(data.sc_1, "scatterPlot_2", "CrnVsCrm", 100, 200);
+                    ScatterPlot(data.sc_1, "scatterPlot_3", "CrsVsCrvs", 100, 200);
+                    ScatterPlot(data.sc_1, "scatterPlot_4", "CrsmVsCrvm", 100, 200);
+                    ScatterPlot(data.sc_1, "scatterPlot_5", "EditsVsReverts", 100, 200);
+
+                    registerClicks();
+                    setTheTimeLine();
+                    svg.svg = svg;
+                    svg.g = g;
+                    setSvdObject(cleanObject);
+                    pageScatterPlotNew(cleanObject.svdOutPut, cleanObject.svdPages, svg);
+                    cleanObject = Object.assign([], []);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log('Error: ' + errorThrown);
+                },
+                complete: function () {
+                }
+            });
+        });
+
+
+        function getCorrectDateFormat(date) {
+            var date = new Date(date);
+
+            var year = date.getFullYear();
+            var month = date.getMonth() + 1;
+            var dateTime = date.getDate();
+            return (year + "-" + month + "-" + dateTime);
+        }
+
+        function GenerateScatterPlot(data) {
+            timeRange = new Date(data.to) - new Date(data.from);
+            timeRange = millisToMinutesAndSeconds(timeRange);
+            if (selectUsers != null || selectUsers != undefined) {
+                console.log("i will make a call to get the user data");
+            }
+
+            $("#scatterPlot").remove();
+            $("#scatterPlotContainer").append(
+                "<div id='scatterPlot' style='height: 200px'><table><tr><td><div id='scatterPlot_1' class='scatterPlot'></div><span id='scatterPlot_1_big' class='glyphicon glyphicon-zoom-in zoomBtn' data-toggle='modal' data-target='.bd-example-modal-lg'></span></td>" +
+                "<td><div id='scatterPlot_2' class='scatterPlot'></div><span id='scatterPlot_2_big' class='glyphicon glyphicon-zoom-in zoomBtn' data-toggle='modal' data-target='.bd-example-modal-lg'></span></td>" +
+                "<td><div id='scatterPlot_3' class='scatterPlot'></div><span id='scatterPlot_3_big' class='glyphicon glyphicon-zoom-in zoomBtn' data-toggle='modal' data-target='.bd-example-modal-lg'></span></td>" +
+                "<td><div id='scatterPlot_4' class='scatterPlot'></div><span id='scatterPlot_4_big' class='glyphicon glyphicon-zoom-in zoomBtn' data-toggle='modal' data-target='.bd-example-modal-lg'></span></td>" +
+                "<td><div id='scatterPlot_5' class='scatterPlot'></div><span id='scatterPlot_5_big' class='glyphicon glyphicon-zoom-in zoomBtn' data-toggle='modal' data-target='.bd-example-modal-lg'></span></td>" +
+                "</tr></table></div>");
+
+            randomFlag = false;
+
+
+            var dbStart = new Date();
+// call after selecting time range
+            $.ajax({
+                type: 'POST',
+                url: 'application/controllers/UserController.php',
+                data: {
+                    "fromDate": getCorrectDateFormat(data.from),
+                    "toDate": getCorrectDateFormat(data.to),
+                    "userType": USER_TYPE
+                },
+                success: function (data) {
+                    var dbEnd = new Date();
+                    console.log("Data retrieved..." + ((dbEnd - dbStart) / 1000) + "seconds")
+                    var data = featureOne(JSON.parse(data));
+                    console.log(data);
+                    globalData = data;
+                    var cleanObject = ungroupObjects(data.sc_1);
+                    const margin = {top: 40, right: 40, bottom: 40, left: 40},
+                        width = 1260 - margin.left - margin.right,
+                        height = 420 - margin.top - margin.bottom,
+                        gridSize = Math.floor(width / 24),
+                        legendElementWidth = gridSize * 2,
+                        buckets = 9;
+                    var each;
+                    var heatMapStart = height / 2;
+                    userClusterFlag = false;
+                    $("#heatMap").remove();
+                    $("#heatMapContainer").append("<div id='heatMap'>");
+                    setLabelDiv();
+
+
+                    const svg = d3.select("#heatMap").append("svg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                    ;
+                    var g = svg.append("g")
+                        .attr("transform", "translate(" + margin.left + "," + margin.top + "), scale(1,1)");
+                    svg.svg = svg;
+                    svg.g = g;
+                    setSvdObject(cleanObject);
+                    console.log(cleanObject);
+                    pageScatterPlotNew(cleanObject.svdOutPut, cleanObject.svdPages, svg);
+                    cleanObject = Object.assign([], []);
+                    console.log(USER_TYPE);
+                    console.log(data);
+                    ScatterPlot(data.sc_1, "scatterPlot_1", "crsVsCrv", 100, 200);
+                    ScatterPlot(data.sc_1, "scatterPlot_2", "CrnVsCrm", 100, 200);
+                    ScatterPlot(data.sc_1, "scatterPlot_3", "CrsVsCrvs", 100, 200);
+                    ScatterPlot(data.sc_1, "scatterPlot_4", "CrsmVsCrvm", 100, 200);
+                    ScatterPlot(data.sc_1, "scatterPlot_5", "EditsVsReverts", 100, 200);
+
+
+                    registerClicks();
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(jqXHR);
+                    console.log('Error: ' + errorThrown);
+                },
+                complete: function () {
+                }
+            });
+
+        }
+
+        var vHidden = false;
+        var bHidden = false;
+
+
+        function benignHide() {
+
+            if (!bHidden) {
+                d3.selectAll(".benignUser").style("display", "none");
+                bHidden = true;
+            } else {
+                d3.selectAll(".benignUser").style("display", "block");
+                bHidden = false;
+            }
+        }
+
+        function vandalsHide() {
+            if (!vHidden) {
+                d3.selectAll(".vandalUser").style("display", "none");
+                vHidden = true;
+            } else {
+                d3.selectAll(".vandalUser").style("display", "block");
+                vHidden = false;
+            }
+
+
+        }
+
+
+    </script>
+</head>
+
+
+<body>
+<div style="width:100%; " id="scatterPlotContainer">
+    <div id="dimensions" style=" position:absolute ;/*! top :340px; */; right:40px;">
+        <div id="user check">
+            <p style="font-weight:bold;">Select type of users:
+                <input type="checkbox" name="userType" checked value="Vandal" id="Vandal"> <label for="Vandal">
+                    Vandal</label>
+                <input type="checkbox" name="userType" checked value="Benign" id="Benign"> <label for="Benign">
+                    Benign</label> <br>
+            </p>
+        </div>
+        <label for="amount">Minimum no. of edits: </label>
+        <input type="text" id="amount" readonly
+               style="border:0; margin-left: -2px; width: 30px; color:#f6931f; font-weight:bold;">
+
+        <div id="slider-vertical"></div>
+        <br>
+        <!--<button id="btn_Testing" class="btn" data-toggle="modal" data-target=".bd-users-modal">Cases </button>
+    </div>
+    <label for="dimensionRange">Dimension Range:  </label>-->
+        <input type="text" id="x" placeholder="Enter 1st dimension" style="width: 100%;"><br><br>
+        <input type="text" id="y" placeholder="Enter 2nd dimension" style="width: 100%;"><br><br>
+        <input type="button" id="dimensionSubmit" value="submit" style="width: 100%;"/><br><br>
+        <input type="button" id="labelToggle" value="Toggle cluster labels" style="width: 100%;"/><br><br>
+        <input type="button" id="generateLabel" value="Generate cluster labels" style="width: 100%;"/><br><br>
+        <input type="button" id="usersEditingSamePage" value="Show users editing same pages"
+               style="width: 100%;"/><br><br>
+
+    </div>
+
+    <!--<div style="position: absolute; z-index: 999;top: 0px;right: 0px; padding: 10px; padding-bottom: 0px; border-bottom: 1px solid #ddd">
+        <input type="checkbox" name="userType" checked value="Vandal" id="Vandal"> <label for="Vandal"> Vandal</label>
+        <input type="checkbox" name="userType" checked value="Benign" id="Benign"> <label for="Benign"> Benign</label>
+
+    </div>
+    <div style="position: absolute; z-index: 999;top: 30px;right: 0px; padding: 10px; padding-bottom: 0px; border-bottom: 1px solid #ddd">
+        <input type="radio" id="truncated" value="truncated" name="svd" checked />
+        <label for="truncated">Truncated SVD</label>
+        <input type="radio" id="svds" value="svds" name="svd"/>
+        <label for="svds">SVDS</label>
+        <input type="radio" id="sparse" value="sparse" name="svd"/>
+        <label for="sparse">Sparse SVD</label>
+    </div>
+
+    <div style=" position:absolute ;top :65px; right:40px;">
+        <input type="checkbox" name="userType" checked value="Vandal" id="Vandal"> <label for="Vandal"> Vandal</label>
+        <input type="checkbox" name="userType" checked value="Benign" id="Benign"> <label for="Benign"> Benign</label>
+
+        <label for="amount"></label>
+        <input type="text" id="amount" readonly style="border:0; margin-left: -2px; width: 30px; color:#f6931f; font-weight:bold;">
+
+    <div id="slider-vertical"></div>
+        <br>
+        <button id="btn_Testing" class="btn" data-toggle="modal" data-target=".bd-users-modal">Cases </button>
+    </div>
+    <span style="position: absolute; right: 0px; top: 80px">Min. No.
+            <br>of Edits</span>-->
+
+
+    <div id="scatterPlot" style="height: 200px">
+
+
+        <table>
+            <tr>
+                <td>
+                    <div id="scatterPlot_1" class="scatterPlot"></div>
+                    <span class="glyphicon glyphicon-zoom-in zoomBtn" data-toggle="modal"
+                          data-target=".bd-example-modal-lg"
+                          id="scatterPlot_1_big"
+                    ></span></td>
+
+                <td>
+                    <div id="scatterPlot_2" class="scatterPlot zoomBtn"></div>
+                    <span id="scatterPlot_2_big" class="glyphicon glyphicon-zoom-in zoomBtn" data-toggle="modal"
+                          data-target=".bd-example-modal-lg"></span></td>
+
+                <td>
+                    <div id="scatterPlot_3" class="scatterPlot"></div>
+                    <span id="scatterPlot_3_big" class="glyphicon glyphicon-zoom-in zoomBtn" data-toggle="modal"
+                          data-target=".bd-example-modal-lg"></span></td>
+
+                <td>
+                    <div id="scatterPlot_4" class="scatterPlot"></div>
+                    <span id="scatterPlot_4_big" class="glyphicon glyphicon-zoom-in zoomBtn" data-toggle="modal"
+                          data-target=".bd-example-modal-lg"></span></td>
+
+                <td>
+                    <div id="scatterPlot_5" class="scatterPlot"></div>
+                    <span id="scatterPlot_5_big" class="glyphicon glyphicon-zoom-in zoomBtn" data-toggle="modal"
+                          data-target=".bd-example-modal-lg"></span></td>
+            </tr>
+        </table>
+
+    </div>
+
+</div>
+<div id="heatMapContainer" style="height: 420px">
+    <!--<div id="dimensions" style=" position:absolute ;/*! top :340px; */; right:40px;">
+        <input type="checkbox" name="userType" checked value="Vandal" id="Vandal"> <label for="Vandal"> Vandal</label>
+        <input type="checkbox" name="userType" checked value="Benign" id="Benign"> <label for="Benign"> Benign</label> <br>
+
+        <label for="amount">Minimum no. of edits: </label>
+        <input type="text" id="amount" readonly style="border:0; margin-left: -2px; width: 30px; color:#f6931f; font-weight:bold;">
+
+        <div id="slider-vertical"></div>
+            <br>
+            <button id="btn_Testing" class="btn" data-toggle="modal" data-target=".bd-users-modal">Cases </button>
+        </div>
+        <input type="text"  id="x" placeholder="Enter 1st dimension" style="width: 100%;"><br><br>
+        <input type="text"  id="y" placeholder="Enter 2nd dimension" style="width: 100%;"><br><br>
+        <input type="button" id="dimensionSubmit" value="submit" style="width: 100%;"/><br><br>
+        <input type="button" id="labelToggle" value="Toggle cluster labels" style="width: 100%;"/><br><br>
+        <input type="button" id="generateLabel" value="Generate cluster labels" style="width: 100%;"/><br><br>
+        <input type="button" id="usersEditingSamePage" value = "Show users editing same pages" style="width: 100%;"/><br><br>
+
+    </div> -->
+    <div id="heatMap">
+    </div>
+</div>
+
+
+<div style="float:left" id="test"></div>
+
+<div class="modal fade bd-example-modal-lg" id="ScatterPlotZoom" tabindex="-1" role="dialog"
+     aria-labelledby="myLargeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Add Users</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body" id="modal_body" style="height: 650px; width: 1000px">
+                <div id="scatterPlot_big" class="scatterPlot"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade bd-users-modal" id="users" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Title</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body" id="modal_body_users" style="height: 650px; width: 1000px">
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+</body>

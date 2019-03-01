@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Wiki Visualisation Page</title>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="./public/css/mysite.css">
+
+    <!--Scripts Refferences-->
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script type="text/javascript" src="http://d3js.org/d3.v4.min.js"></script>
+    <script src="./public/js/numeric-1.2.6.js"></script>
+    <script src="./public/js/jsfeat.js"></script>
+    <script src="./public/js/d3-lasso.min.js"></script>
+
+    <script src="http://mlweb.loria.fr/lalolib.js"></script>
+
+    <!--JS Code files -->
+    <script src="./public/customjs/userFeaturs.js"></script>
+    <script src="./public/customjs/scatterPlot.js"></script>
+    <script src="./public/customjs/timeLine.js"></script>
+    <script src="./public/customjs/heatMap.js"></script>
+    <script src="./public/customjs/PageScatterPlot.js"></script>
+    <style type="text/css">
+
+        .modal-lg {
+            width: 1100px;
+        }
+
+        .zoomBtn {
+            padding-top: 20px;
+        }
+
+    </style>
+
+    <script type="text/javascript">
+
+        var globalData;
+        var USER_TYPE = "Vandal";
+        var min_edits = 10;
+        var rangeData = [];
+
+        function registerClicks() {
+            $("#scatterPlot_1_big").on("click", function () {
+
+                $("#scatterPlot_big").remove();
+                $("#modal_body").append("<div id='scatterPlot_big' class='scatterPlot'></div>");
+                console.log("Log");
+                console.log(globalData.sc_1);
+                ScatterPlot(globalData.sc_1, "scatterPlot_big", "crsVsCrv", 1000, 600);
+            });
+
+
+            $("#scatterPlot_2_big").on("click", function () {
+
+                $("#scatterPlot_big").remove();
+                $("#modal_body").append("<div id='scatterPlot_big' class='scatterPlot'></div>");
+                ScatterPlot(globalData.sc_1, "scatterPlot_big", "CrnVsCrm", 1000, 600);
+            });
+
+            $("#scatterPlot_3_big").on("click", function () {
+
+                $("#scatterPlot_big").remove();
+                $("#modal_body").append("<div id='scatterPlot_big' class='scatterPlot'></div>");
+                ScatterPlot(globalData.sc_1, "scatterPlot_big", "CrsVsCrvs", 1000, 600);
+            });
+
+            $("#scatterPlot_4_big").on("click", function () {
+
+                $("#scatterPlot_big").remove();
+                $("#modal_body").append("<div id='scatterPlot_big' class='scatterPlot'></div>");
+                ScatterPlot(globalData.sc_1, "scatterPlot_big", "CrsmVsCrvm", 1000, 600);
+            });
+
+            $("#scatterPlot_5_big").on("click", function () {
+
+                $("#scatterPlot_big").remove();
+                $("#modal_body").append("<div id='scatterPlot_big' class='scatterPlot'></div>");
+                ScatterPlot(globalData.sc_1, "scatterPlot_big", "EditsVsReverts", 1000, 600);
+            });
+
+        }
+
+
+        $(document).ready(function () {
+
+
+            registerClicks();
+
+
+            $("#slider-vertical").slider({
+                orientation: "vertical",
+                range: "min",
+                min: 0,
+                max: 100,
+                value: 60,
+                slide: function (event, ui) {
+                    $("#amount").val(ui.value);
+                    min_edits = ui.value;
+                }
+            });
+            $("#amount").val($("#slider-vertical").slider("value"));
+
+
+            $("input").on("click", function () {
+                // $( "#log" ).html( $( "input:checked" ).val() + " is checked!" );
+
+                var type = $("input:checked").val();
+                var type2 = $("input:checkbox:not(:checked)").val();
+
+                var selected = [];
+                $(' input:checked').each(function () {
+                    selected.push($(this).attr('value'));
+                });
+                if (selected.length < 1) {
+                    USER_TYPE = "Vandal";
+                } else if (selected.length > 1) {
+                    USER_TYPE = "Both";
+                } else {
+                    USER_TYPE = selected[0];
+                }
+
+
+            });
+
+            /*$.ajax({
+                type: 'POST',
+                url: 'application/controllers/UserController.php',
+                //data: {  "fromDate": "8" },
+                success: function(data) {
+                    //console.log(data);
+                    var data = featureOne(JSON.parse(data));
+                    //console.log(data);
+                    globalData = data;
+                    ScatterPlot(data.sc_1,"scatterPlot_1", "crsVsCrv",200,200);
+                    ScatterPlot(data.sc_1,"scatterPlot_2", "CrnVsCrm",200,200);
+                    ScatterPlot(data.sc_1,"scatterPlot_3", "CrsVsCrvs",200,200);
+                    ScatterPlot(data.sc_1,"scatterPlot_4", "CrsmVsCrvm",200,200);
+                    ScatterPlot(data.sc_1,"scatterPlot_5", "EditsVsReverts",200,200);
+                   // ScatterPlot(data.sc_1,"scatterPlot_6", "crvsVsCrs",200,200);
+
+                   // ScatterPlot(data.sc_1,"scatterPlot_big", "crsVsCrv", 1000, 600);
+
+                    registerClicks();
+                    setTheTimeLine();
+
+                },
+                error: function(jqXHR, textStatus, errorThrown){
+                    console.log('Error: ' + errorThrown);
+                },
+                complete: function() {
+                }
+            });*/
+        });
+
+
+        function getCorrectDateFormat(date) {
+            var date = new Date(date);
+
+            var year = date.getFullYear();
+            var month = date.getMonth() + 1;
+            var dateTime = date.getDate();
+            return (year + "-" + month + "-" + dateTime);
+        }
+
+        function GenerateScatterPlot(data) {
+
+            if (selectUsers != null || selectUsers != undefined) {
+                console.log("i will make a call to get the user data");
+            }
+
+            $("#scatterPlot").remove();
+            $("#scatterPlotContainer").append(
+                "<div id='scatterPlot' style='height: 200px'><table><tr><td><div id='scatterPlot_1' class='scatterPlot'></div><span id='scatterPlot_1_big' class='glyphicon glyphicon-zoom-in zoomBtn' data-toggle='modal' data-target='.bd-example-modal-lg'></span></td>" +
+                "<td><div id='scatterPlot_2' class='scatterPlot'></div><span id='scatterPlot_2_big' class='glyphicon glyphicon-zoom-in zoomBtn' data-toggle='modal' data-target='.bd-example-modal-lg'></span></td>" +
+                "<td><div id='scatterPlot_3' class='scatterPlot'></div><span id='scatterPlot_3_big' class='glyphicon glyphicon-zoom-in zoomBtn' data-toggle='modal' data-target='.bd-example-modal-lg'></span></td>" +
+                "<td><div id='scatterPlot_4' class='scatterPlot'></div><span id='scatterPlot_4_big' class='glyphicon glyphicon-zoom-in zoomBtn' data-toggle='modal' data-target='.bd-example-modal-lg'></span></td>" +
+                "<td><div id='scatterPlot_5' class='scatterPlot'></div><span id='scatterPlot_5_big' class='glyphicon glyphicon-zoom-in zoomBtn' data-toggle='modal' data-target='.bd-example-modal-lg'></span></td>" +
+                "</tr></table></div>");
+
+
+            $.ajax({
+                type: 'POST',
+                url: 'application/controllers/UserController.php',
+                data: {
+                    "fromDate": getCorrectDateFormat(data.from),
+                    "toDate": getCorrectDateFormat(data.to),
+                    "userType": USER_TYPE
+                },
+                success: function (data) {
+                    var data = featureOne(JSON.parse(data));
+                    globalData = data;
+                    //console.log(data);
+                    ScatterPlot(data.sc_1, "scatterPlot_1", "crsVsCrv", 200, 200);
+                    ScatterPlot(data.sc_1, "scatterPlot_2", "CrnVsCrm", 200, 200);
+                    ScatterPlot(data.sc_1, "scatterPlot_3", "CrsVsCrvs", 200, 200);
+                    ScatterPlot(data.sc_1, "scatterPlot_4", "CrsmVsCrvm", 200, 200);
+                    ScatterPlot(data.sc_1, "scatterPlot_5", "EditsVsReverts", 200, 200);
+
+
+                    registerClicks();
+
+
+                    //setTheTimeLine();
+
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log('Error: ' + errorThrown);
+                },
+                complete: function () {
+                }
+            });
+
+        }
+
+        var vHidden = false;
+        var bHidden = false;
+
+
+        function benignHide() {
+
+            if (!bHidden) {
+                d3.selectAll(".benignUser").style("display", "none");
+                bHidden = true;
+            } else {
+                d3.selectAll(".benignUser").style("display", "block");
+                bHidden = false;
+            }
+        }
+
+        function vandalsHide() {
+            if (!vHidden) {
+                d3.selectAll(".vandalUser").style("display", "none");
+                vHidden = true;
+            } else {
+                d3.selectAll(".vandalUser").style("display", "block");
+                vHidden = false;
+            }
+
+
+        }
+
+        var init = function (fromDate, toDate) {
+            // Read csv file
+            //var rangedBenignUsersData;
+            d3.queue()
+                .defer(d3.csv, "data/mergedData/benignUsersData.csv")
+                .defer(d3.tsv, "data/mergedData/pages.tsv")
+                .await(combine);
+
+            function combine(error, benignUsersData, pages) {
+                if (error) {
+                    console.log(error);
+                }
+
+                benignUsersData.forEach(function (datum) {
+                    if (datum.revtime > fromDate && datum.revtime < toDate) {
+                        rangeData.push(datum);
+                    }
+                });
+
+                rangeData.forEach(function (benignUsersDatum) {
+                    var result = pages.filter(function (page) {
+                        return page.pagetitle === benignUsersDatum.pagetitle;
+                    });
+
+                    //delete benignUsersDatum.pagetitle;
+                    benignUsersDatum.pageid = (result[0] !== undefined) ? result[0].pageid : null;
+                    benignUsersDatum.pagecategories = (result[0] !== undefined) ? result[0].pagecategories : null;
+                });
+                display();
+                //console.log(benignUsersData);
+            }
+
+
+            //var temp = featureOne(JSON.parse(rangeData));
+
+
+        };
+        var display = function () {
+            console.log(rangeData);
+            var data = featureOne(JSON.stringify(rangeData));
+            //console.log(data);
+            globalData = data;
+            ScatterPlot(data.sc_1, "scatterPlot_1", "crsVsCrv", 200, 200);
+            ScatterPlot(data.sc_1, "scatterPlot_2", "CrnVsCrm", 200, 200);
+            ScatterPlot(data.sc_1, "scatterPlot_3", "CrsVsCrvs", 200, 200);
+            ScatterPlot(data.sc_1, "scatterPlot_4", "CrsmVsCrvm", 200, 200);
+            ScatterPlot(data.sc_1, "scatterPlot_5", "EditsVsReverts", 200, 200);
+            // ScatterPlot(data.sc_1,"scatterPlot_6", "crvsVsCrs",200,200);
+
+            // ScatterPlot(data.sc_1,"scatterPlot_big", "crsVsCrv", 1000, 600);
+
+            registerClicks();
+            setTheTimeLine();
+        }
+        init('2013-12-01', '2013-12-30');
+
+    </script>
+</head>
+
+
+<body>
+<div style="width:100%; " id="scatterPlotContainer">
+
+
+    <div style="position: absolute; z-index: 999;top: 0px;right: 0px; padding: 10px; padding-bottom: 0px; border-bottom: 1px solid #ddd">
+        <input type="checkbox" name="userType" value="Vandal" id="Vandal"> <label for="Vandal"> Vandal</label><br>
+        <input type="checkbox" name="userType" value="Benign" id="Benign"> <label for="Benign"> Benign</label>
+
+    </div>
+
+    <div style=" position:absolute ;top :60px; right:40px;">
+
+        <label for="amount"></label>
+        <input type="text" id="amount" readonly
+               style="border:0; margin-left: -2px; width: 30px; color:#f6931f; font-weight:bold;">
+
+        <div id="slider-vertical" style="height:80px; "></div>
+        <br>
+        <button id="btn_Testing" class="btn" data-toggle="modal" data-target=".bd-users-modal">Cases</button>
+    </div>
+    <span style="position: absolute; right: 0px; top: 80px">Min. No.
+			<br>of Edits</span>
+
+
+    <br>
+
+
+    <div id="scatterPlot" style="height: 200px">
+
+
+        <table>
+            <tr>
+                <td>
+                    <div id="scatterPlot_1" class="scatterPlot"></div>
+                    <span class="glyphicon glyphicon-zoom-in zoomBtn" data-toggle="modal"
+                          data-target=".bd-example-modal-lg"
+                          id="scatterPlot_1_big"
+                    ></span></td>
+
+                <td>
+                    <div id="scatterPlot_2" class="scatterPlot zoomBtn"></div>
+                    <span id="scatterPlot_2_big" class="glyphicon glyphicon-zoom-in zoomBtn" data-toggle="modal"
+                          data-target=".bd-example-modal-lg"></span></td>
+
+                <td>
+                    <div id="scatterPlot_3" class="scatterPlot"></div>
+                    <span id="scatterPlot_3_big" class="glyphicon glyphicon-zoom-in zoomBtn" data-toggle="modal"
+                          data-target=".bd-example-modal-lg"></span></td>
+
+                <td>
+                    <div id="scatterPlot_4" class="scatterPlot"></div>
+                    <span id="scatterPlot_4_big" class="glyphicon glyphicon-zoom-in zoomBtn" data-toggle="modal"
+                          data-target=".bd-example-modal-lg"></span></td>
+
+                <td>
+                    <div id="scatterPlot_5" class="scatterPlot"></div>
+                    <span id="scatterPlot_5_big" class="glyphicon glyphicon-zoom-in zoomBtn" data-toggle="modal"
+                          data-target=".bd-example-modal-lg"></span></td>
+
+                <!--<td><div id="scatterPlot_6" class="scatterPlot"></div>-->
+                <!--</td>-->
+            </tr>
+        </table>
+
+    </div>
+
+
+</div>
+<div id="heatMapContainer" style="height: 420px">
+    <div id="heatMap">
+    </div>
+</div>
+
+
+<div style="float:left" id="test"></div>
+
+<div class="modal fade bd-example-modal-lg" id="ScatterPlotZoom" tabindex="-1" role="dialog"
+     aria-labelledby="myLargeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Add Users</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body" id="modal_body" style="height: 650px; width: 1000px">
+                <div id="scatterPlot_big" class="scatterPlot"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade bd-users-modal" id="users" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Title</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body" id="modal_body_users" style="height: 650px; width: 1000px">
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+</body>

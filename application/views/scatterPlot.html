@@ -1,0 +1,213 @@
+<html>
+
+<head>
+   
+	<script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+    <style>
+        circle {
+            fill: rgb(31, 119, 180);
+            fill-opacity: .25;
+            stroke: rgb(31, 119, 180);
+            stroke-width: 1px;
+        }
+        .packedNode circle {
+            fill: #ff7f0e;
+            fill-opacity: 1;
+        }
+        text {
+            font: 10px sans-serif;
+        }
+    </style>
+
+</head>
+
+<body>
+
+<script>
+    var flareData = {
+        "name": "root",
+        "children": [{
+            "name": "pointOne",
+            "scatX": 10,
+            "scatY": 20,
+            "children": [{
+                "name": "pointOneA",
+                "children": [{
+                    "name": "A",
+                    "size": 40
+                }, {
+                    "name": "B",
+                    "size": 50
+                }]
+            }, {
+                "name": "pointOneB",
+                "children": [{
+                    "name": "C",
+                    "size": 10
+                }, {
+                    "name": "D",
+                    "size": 23
+                }]
+            }]
+        }, {
+            "name": "pointTwo",
+            "scatX": 10,
+            "scatY": 20,
+            "children": [{
+                "name": "E",
+                "size": 100
+            }, {
+                "name": "F",
+                "size": 12
+            }, {
+                "name": "G",
+                "size": 34
+            }, {
+                "name": "H",
+                "size": 78
+            }]
+        }, {
+            "name": "pointThree",
+            "scatX": 90,
+            "scatY": 10,
+            "children": [{
+                "name": "J",
+                "size": 14
+            }, {
+                "name": "K",
+                "size": 63
+            }, {
+                "name": "L",
+                "size": 89
+            }, {
+                "name": "M",
+                "size": 14
+            }]
+        }]
+    }
+
+    var
+        WIDTH = 500,
+        HEIGHT = 300,
+        DIAMETER = 200;
+
+    var vis = d3.select('body')
+        .append('svg')
+        .attr('width', WIDTH)
+        .attr('height', HEIGHT);
+
+    var MARGINS = {
+            top: 20,
+            right: 20,
+            bottom: 20,
+            left: 50
+        },
+        xRange = d3.scale
+            .linear()
+            .range([MARGINS.left, WIDTH - MARGINS.right])
+            .domain([d3.min(flareData.children, function(d) {
+                return d.scatX;
+            }) - 10, d3.max(flareData.children, function(d) {
+                return d.scatX;
+            }) + 10]),
+        yRange = d3.scale
+            .linear()
+            .range([HEIGHT - MARGINS.top, MARGINS.bottom])
+            .domain([d3.min(flareData.children, function(d) {
+                return d.scatY;
+            }) - 10, d3.max(flareData.children, function(d) {
+                return d.scatY;
+            }) + 10]),
+        xAxis = d3.svg.axis()
+            .scale(xRange)
+            .tickSize(5)
+            .tickSubdivide(true),
+        yAxis = d3.svg.axis()
+            .scale(yRange)
+            .tickSize(5)
+            .orient('left')
+            .tickSubdivide(true);
+
+
+
+
+
+    vis.append('svg:g')
+        .attr('class', 'x axis')
+        .attr('transform', 'translate(0,' + (HEIGHT - MARGINS.bottom) + ')')
+        .call(xAxis);
+
+    vis.append('svg:g')
+        .attr('class', 'y axis')
+        .attr('transform', 'translate(' + (MARGINS.left) + ',0)')
+        .call(yAxis);
+
+    // normal packed layout
+    var pack = d3.layout.pack()
+        .size([DIAMETER - 4, DIAMETER - 4])
+        .value(function(d) {
+            return d.size;
+        });
+
+    // classify each level
+    var node = vis.datum(flareData).selectAll(".node")
+        .data(pack.nodes)
+        .enter().append("g")
+        .attr("class", function(d) {
+            // root level
+            if (!d.parent) {
+                return "node rootNode";
+                // first level children, these are our scatter points
+            } else if (d.children && !d.parent.parent) {
+                return "node pointNode";
+                // an intermediate circle
+            } else if (d.children) {
+                return "node innerNode";
+                // last level packing
+            } else {
+                return "node innerNode packedNode";
+            }
+        });
+
+    // use calculated radius
+    node.append("circle")
+        .attr("r", function(d) {
+            return d.r;
+        });
+
+    // we don't care about root circle, move off page
+    node.filter(".rootNode")
+        .attr("transform", "translate(" + -100 + "," + -100 + ")");
+
+    // this is our scatter point
+    node.filter(".pointNode")
+        .attr("transform", function(d) {
+            return "translate(" + xRange(d.scatX) + "," + yRange(d.scatY) + ")";
+        });
+
+    // any circle in a scatter point
+    node.filter(".innerNode")
+        .attr("transform", function(d) {
+            var iter = d;
+            while (!iter.scatX) {
+                iter = iter.parent;
+            }
+            // diff from scatter point...
+            var difX = iter.x - d.x,
+                difY = iter.y - d.y;
+            return "translate(" + (xRange(iter.scatX) + difX) + "," + (yRange(iter.scatY) + difY) + ")";
+        })
+
+    // finally label our last level
+    node.filter(".packedNode")
+        .append("text")
+        .attr("dy", ".3em")
+        .style("text-anchor", "middle")
+        .text(function(d) {
+            return d.name;
+        });
+</script>
+
+</body>
+
+</html>

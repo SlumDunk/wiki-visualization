@@ -1,0 +1,75 @@
+
+.scatterPlot
+{
+    float: left;
+    display: block;
+}
+
+ .lasso path {
+            stroke: #aaa;
+            stroke-width:1px;
+            fill: none; 
+        }
+
+        .lasso .drawn {
+            fill-opacity:.05 ;
+        }
+
+        .lasso .loop_close {
+            fill:none;
+            stroke-dasharray: 4,4;
+        }
+
+        .lasso .origin {
+            fill:#fff;
+            fill-opacity:.5;
+        }
+
+        .not_possible {
+            fill: rgb(200,200,200);
+        }
+
+        .possible {
+            fill: #EC888C;
+        }
+
+        .selected {
+            fill: steelblue;
+        }
+
+
+        .axis--grid .domain {
+  fill: #ddd;
+  stroke: none;
+}
+
+
+.axis--x .domain,
+.axis--grid .tick line {
+  stroke: #fff;
+}
+
+.axis--grid .tick--minor line {
+  stroke-opacity: .5;
+}
+
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+
+.axis text {
+    font: 10px sans-serif;
+}
+
+.cells path {
+    fill: none;
+    pointer-events: all;
+}
+
+.cells :hover circle {
+    fill: red;
+}
