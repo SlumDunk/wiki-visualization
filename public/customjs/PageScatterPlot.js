@@ -55,14 +55,16 @@ function pageScatterPlotNew(svdOutput, svdPages, svg) {
         }
     }
 
-    console.log(dimValues);
     //sort the array by the value
     dimValues.sort(function (x, y) {
-        return d3.ascending(x.value, y.value);
+        return d3.descending(x.value, y.value);
     });
+
+    // console.log(dimValues);
 
     let uKey = [];
     for (let i = 0; i < rows; i++) {
+        // console.log(svdOutput[i][dimValues[xVal].index]);
         let eachObj = {
             "id": svdOutput[i][dimValues[xVal].index],
             "value": svdOutput[i][dimValues[yVal].index],
@@ -109,18 +111,20 @@ function pageScatterPlotNew(svdOutput, svdPages, svg) {
         .attr("r", function (d) {
             return 2;
         })
-        .style("stroke-width", 2)
+        .style("stroke-width", 0.1)
         .style("stroke", function (d) {
-            return "#ff0000";
+            return "#000";
         })
         .attr("class", function (d) {
             return "cir_" + d.name.replace(/[_\W]+/g, "-");
         })
         .attr("cx", function (d) {
-            return xScale(d.id);
+            let cx = xScale(d.id);
+            return cx;
         })
         .attr("cy", function (d) {
-            return yScale(d.value);
+            let cy = yScale(d.value);
+            return cy;
         })
         .on("mouseout", hMouseOut)
         .on("mouseover", hMouseOver);
@@ -129,7 +133,7 @@ function pageScatterPlotNew(svdOutput, svdPages, svg) {
         .text(function (d) {
             return (d.name + " | Categories:  " + categorySplitter(d.categories));
         });
-    //init the page scatter
+    //draw the links between scatter points and rectangles
     pageScatterPlotInit();
     //draw clusters
     drawClusters();
@@ -231,12 +235,13 @@ function hMouseOver(d, i) {
 }
 
 /**
+ * draw the relationship between circles and rectangles
  * init the page scatter
  */
 function pageScatterPlotInit() {
     let height = 0;
     for (let i = 0; i < data.length; i++) {
-        color = randomColor;
+        color = randomColor();
         let item = data[i];
 
         let rectangleList = d3.selectAll(".rect_" + item.name.replace(/[_\W]+/g, "-")); // all rects
@@ -347,8 +352,6 @@ function addHull() {
         // path given data points for cluster
         let d_path = d3.polygonHull(d_cluster);
 
-        let colorArray = ["#ffffe5", "#fff7bc", "#fee391", "#fec44f", "#fe9929", "#ec7014", "#ec7014", "#cc4c02", "#993404", "#662506"];
-
         let color = d3.schemeCategory20[+cluster];
 
         // ref: https://bl.ocks.org/mbostock/4341699
@@ -359,7 +362,7 @@ function addHull() {
             .attr("d", d_path === null ? null : "M" + d_path.join("L") + "Z")
             .attr("fill", color)
             .style("stroke", color)
-            .style("opacity", 0.2);
+            .style("opacity", 0.25);
     });
 
 }
@@ -471,6 +474,9 @@ function generateLabels() {
                 .map((item) => [xScale(item.id), yScale(item.value)]);
             let clusterData = d3.selectAll("#pt_cluster_" + i).data();
             let d_path = d3.polygonHull(d_cluster);
+            if(d_path==null||d_path.length==0){
+                continue;
+            }
             let polygonCenterId = d3.polygonCentroid(d_path);
             let names, categories = "";
             clusterData.forEach(function (d) {
@@ -489,11 +495,12 @@ function generateLabels() {
 
             polygonCenterId = sanitize(polygonCenterId);
             drawnHulls.append("text")
-                .attr("x", polygonCenterId[0] + xAdd)
+                .attr("x", polygonCenterId[0])
                 .attr("y", polygonCenterId[1] + yAdd)
                 .text("" + commonWords[0] + ":" + commonWords[1] + ":" + commonWords[2])
-                .style("stroke", color)
+                .style("stroke", '#ff0000')
                 .style("opacity", 1)
+                .style("z-index",2)
                 .style("font-size", "12px");
             yAdd += 10;
         } catch (e) {
@@ -510,7 +517,7 @@ function generateLabels() {
  * draw cluster
  */
 function drawClusters() {
-    clusters = d3.range(0, 5).map((n) => n.toString());
+    clusters = d3.range(0, 4).map((n) => n.toString());
     hulls.selectAll("path")
         .data(clusters)
         .enter()
@@ -520,16 +527,15 @@ function drawClusters() {
         .attr("transform", "translate(" + margin.left + ",10), scale(1,1)");
 
     let initialCenterIds = clusters.map(() => data[Math.round(d3.randomUniform(0, data.length)())]);
-    //highlight selected clusters
+    //group all points into different group according to their distance between different circles
     assignCluster(initialCenterIds);
-    //
+    //add hull, represents each cluster
     addHull();
     let costs = [];
     costs.push(computeCost());
-    //
+    //adjust the boarder of hull dynamically
     let iterate = d3.interval(() => {
         let cluster = computeCenterIds()
-
         assignCluster(cluster)
         addHull();
         let cost = computeCost();

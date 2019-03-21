@@ -1,6 +1,4 @@
 let opacity;
-//store the output result of svd api
-let svdObject;
 let startTime, endTime;
 //store the user index and color, each color represents one page edit by adjacent users
 let pagesEditedBySameUsers = new Set();
@@ -31,23 +29,7 @@ function setTimeRange(st, et) {
 }
 
 /**
- * save the output result of svd
- * @param svdObject
- */
-function setSvdObject(svdObject) {
-    svdObject = Object.assign([], svdObject);
-}
-
-/**
- * return svdObject
- * @returns {*}
- */
-function getSvdObject() {
-    return svdObject;
-}
-
-/**
- * decompose the group data
+ * form the input matrix for svd and get the output result of svd
  * @param data
  * @returns {{svdPages: Array, HeatMap: Array, svdOutPut: Array}}
  */
@@ -158,7 +140,7 @@ function ungroupObjects(data) {
                 checkForZero = checkForZero + 0;
             }
         }
-        //if there are reverted edits and un reverted edits for this page
+        //if there are reverted edits and un-reverted edits for this page
         if (checkForZero > 0) {
             svdInput.push(row);
             // storing the page names and page category
@@ -180,17 +162,17 @@ function ungroupObjects(data) {
  * @param data
  */
 function heatMap(data) {
-    //store the user
-    let selectedUsers = [];
+    //store the pages edit information of selected pages
+    let selectedUsersPages = [];
     for (let i = 0; i < data.length; i++) {
         for (let j = 0; j < svdObject.HeatMap.length; j++) {
             if (svdObject.HeatMap[j].userIndex == data[i]) {
-                selectedUsers.push(svdObject.HeatMap[j]);
+                selectedUsersPages.push(svdObject.HeatMap[j]);
             }
         }
     }
 
-    if (selectedUsers.length != 0) {
+    if (selectedUsersPages.length != 0) {
         randomFlag = false;
         //remove old heat map
         d3.selectAll("#heatMapContainer path").remove();
@@ -199,12 +181,12 @@ function heatMap(data) {
         //reset the label for heat map div
         setLabelDiv();
         //get the user matrix
-        let userMatrix = generateHeatMapData(selectedUsers);
+        let userMatrix = generateHeatMapData(selectedUsersPages);
         let svg;
         //format the array
         let formatUserMatrix = JSON.parse(JSON.stringify(userMatrix));
-        //if the length of the array longer than 6
-        if (formatUserMatrix.length > 6) {
+        //if the length of the array longer than 6, group all users into two group, vandals and benign
+        if (formatUserMatrix.length > 5) {
             let vandalUsers = [], benignUsers = [], superUsers = [];
             formatUserMatrix.forEach(function (row) {
                 if (row.u_type == "V")
@@ -238,10 +220,10 @@ function heatMap(data) {
 
 /**
  * filter the data needed for the heatmap
- * @param selectedUsers
+ * @param selectedUsersPages
  * @returns {Array}
  */
-function generateHeatMapData(selectedUsers) {
+function generateHeatMapData(selectedUsersPages) {
 
     let userMatrix = [];
 
@@ -249,11 +231,11 @@ function generateHeatMapData(selectedUsers) {
     let previousPage = {"pageName": "", "userName": "", "EditTime": ""}; // Previous Page
 
 
-    for (let j = 0; j < selectedUsers.length; j++) {
+    for (let j = 0; j < selectedUsersPages.length; j++) {
         //pages this user edit
-        let editPages = selectedUsers[j].values;
+        let editPages = selectedUsersPages[j].values;
 
-        let userName = selectedUsers[j].key;
+        let userName = selectedUsersPages[j].key;
         //group the pages by the edit time difference
         let userPages = [];
         //store the meta pages current user edit
@@ -324,16 +306,17 @@ function generateHeatMapData(selectedUsers) {
             }
             previousPage = editPages[i];
         }
+        //the pages distribution of each user
         userPages.push({"key": "0", "values": metaPages}); // meta
         userPages.push({"key": "1", "values": timeL3}); // very fast
         userPages.push({"key": "2", "values": timeG3L15}); // fast
         userPages.push({"key": "3", "values": timeG15}); // slow
 
         userMatrix.push({
-            "key": selectedUsers[j].key,
+            "key": selectedUsersPages[j].key,//name of user
             "name": userName,
             "values": userPages,
-            "u_type": selectedUsers[j].u_Type
+            "u_type": selectedUsersPages[j].u_Type// type of user
         });
     }
 
@@ -390,12 +373,12 @@ function draw(userMatrix) {
 
     for (let i = 0; i < userMatrix.length; i++) {
         let pages = userMatrix[i].values;
-        //sort by counts of each timediff
+        //sort by number of pages
         pages.sort(function (page1, page2) {
             return d3.ascending(page1.values.length, page2.values.length);
         });
 
-        //order by time diff
+        //order by time diff 0 meta, timeL3, timeG3L15, timeG15
         pages.sort(function (page1, page2) {
             return d3.ascending(page1.key, page2.key);
         });
@@ -424,22 +407,23 @@ function draw(userMatrix) {
             .append("rect");
 
         let pushAttr = 10;
-        let RectHeight = 5;
+        let rectHeight = 5;
 
         let spaceHeight = 10;
+        let gap = 2;
 
         let cell = g.append("g");
-
+        //draw the user type
         let circle = cell.append("circle")
             .attr("cx", 5)
             .attr("id", "barCircles")
-            .attr("cy", heatMapStart + RectHeight)
+            .attr("cy", heatMapStart + rectHeight)
             .attr("r", 6);
 
 
         cell.append("text")
             .attr("x", 1.5)
-            .attr("y", heatMapStart + RectHeight + 4)
+            .attr("y", heatMapStart + rectHeight + 4)
             .text(userMatrix[i].u_type)
             .attr("font-size", "10px")
             .style("fill", "#fff");
@@ -458,17 +442,24 @@ function draw(userMatrix) {
             })
             .attr("y", heatMapStart)
             .attr("width", eachWidth)
-            .attr("height", RectHeight)
+            .attr("height", rectHeight)
             .attr("opacity", 0.5)
             .attr("class", function (d) {
                 return "rect_" + d.pageTitle.replace(/[_\W]+/g, "-");
             })
             .on("mouseover", handleMouseOver)
             .on("mouseout", handleMouseOut)
-            .style("fill", "#000");
+            .style("fill", function (d) {
+                if (d.isReverted == "True") {
+                    return "#F00";
+                } else {
+                    return "#000000";
+
+                }
+            });
 
         //the y position of next rect
-        heatMapStart = heatMapStart + RectHeight;
+        heatMapStart = heatMapStart + rectHeight + gap;
 
         timeL3PagesMatrix
             .attr("x", function (d) {
@@ -479,7 +470,7 @@ function draw(userMatrix) {
             })
             .attr("y", heatMapStart)
             .attr("width", eachWidth)
-            .attr("height", RectHeight)
+            .attr("height", rectHeight)
             .attr("opacity", 0.5)
             .on("mouseover", handleMouseOver)
             .on("mouseout", handleMouseOut)
@@ -490,12 +481,12 @@ function draw(userMatrix) {
                 if (d.isReverted == "True") {
                     return "#F00";
                 } else {
-                    return "#F6B67F";
+                    return "#00ffff";
 
                 }
             });
 
-        heatMapStart = heatMapStart + RectHeight;
+        heatMapStart = heatMapStart + rectHeight+ gap;
 
         timeG3L15PagesMatrix
             .attr("x", function (d) {
@@ -506,16 +497,23 @@ function draw(userMatrix) {
             })
             .attr("y", heatMapStart)
             .attr("width", eachWidth)
-            .attr("height", RectHeight)
+            .attr("height", rectHeight)
             .attr("opacity", 0.5)
             .on("mouseover", handleMouseOver)
             .on("mouseout", handleMouseOut)
             .attr("class", function (d) {
                 return "rect_" + d.pageTitle.replace(/[_\W]+/g, "-");
             })
-            .style("fill", "#c49165");
+            .style("fill", function (d) {
+                if (d.isReverted == "True") {
+                    return "#F00";
+                } else {
+                    return "#ffff00";
 
-        heatMapStart = heatMapStart + RectHeight;
+                }
+            });
+
+        heatMapStart = heatMapStart + rectHeight+ gap;
 
 
         timeG15PagesMatrix
@@ -528,7 +526,7 @@ function draw(userMatrix) {
             })
             .attr("y", heatMapStart)
             .attr("width", eachWidth)
-            .attr("height", RectHeight)
+            .attr("height", rectHeight)
             .attr("opacity", 0.5)
             .on("mouseover", handleMouseOver)
             .on("mouseout", handleMouseOut)
@@ -539,7 +537,7 @@ function draw(userMatrix) {
                 if (d.isReverted == "True") {
                     return "#F00";
                 } else {
-                    return "#7f5e41";
+                    return "#00ff00";
 
                 }
             });
@@ -607,7 +605,7 @@ function handleMouseOut(d, i) {
 }
 
 /**
- * highlight bars
+ * highlight the circle of user type
  */
 function drawHighlightBars() {
 
@@ -628,7 +626,7 @@ function drawHighlightBars() {
 }
 
 /**
- *
+ * combine all users into one super user
  * @param users
  * @returns {{values: Array, name: string, u_type: *, key: string}}
  */
@@ -675,6 +673,7 @@ function createSuperUser(users) {
  * @returns {Array}
  */
 function callSVD(svdInput) {
+    console.log(svdInput);
     let result = [];
     $.ajax({
         type: "POST",
@@ -687,6 +686,6 @@ function callSVD(svdInput) {
             result = data;
         }
     });
-
+    console.log(result);
     return result;
 }

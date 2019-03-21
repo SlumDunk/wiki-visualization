@@ -19,7 +19,7 @@
         div.tooltip {
             position: relative;
             text-align: center;
-            width: 100%;
+            width: 250px;
             height: 30px;
             padding: 2px;
             font: 10px sans-serif;
@@ -208,6 +208,9 @@
     let heatMap_width = 1280 - localMargin.left - localMargin.right,
         heatMap_height = 400 - localMargin.top - localMargin.bottom;
 
+    //store the output result of svd api
+    var svdObject;
+
     /**
      * register click event and listeners
      * */
@@ -355,7 +358,6 @@
                 $("#heatMap").remove();
                 $("#heatMapContainer").append("<div id='heatMap'>");
 
-                let cleanObject = getSvdObject();
                 let svg = d3.select("#heatMap").append("svg")
                     .attr("width", heatMap_width + localMargin.left + localMargin.right)
                     .attr("height", heatMap_height + localMargin.top + localMargin.bottom);
@@ -364,7 +366,7 @@
                 svg.svg = svg;
                 svg.g = g;
 
-                pageScatterPlotNew(cleanObject.svdOutPut, cleanObject.svdPages, svg);
+                pageScatterPlotNew(svdObject.svdOutPut, svdObject.svdPages, svg);
             } else {
                 console.log("select a number from 0 to " + globalData.sc_1.length);
             }
@@ -379,7 +381,7 @@
                 data = featureOne(JSON.parse(data));
                 globalData = data;
                 userClusterFlag = false;
-                let svdObject = ungroupObjects(data.sc_1);
+                svdObject = ungroupObjects(data.sc_1);
 
                 //render the heat map block
                 let svg = d3.select("#heatMap").append("svg")
@@ -407,8 +409,6 @@
 
                 //update the time line div
                 setTheTimeLine();
-
-                setSvdObject(svdObject);
 
                 pageScatterPlotNew(svdObject.svdOutPut, svdObject.svdPages, svg);
             },
@@ -469,7 +469,7 @@
                 data = featureOne(JSON.parse(data));
                 //update the global data
                 globalData = data;
-                let cleanObject = ungroupObjects(data.sc_1);
+                svdObject = ungroupObjects(data.sc_1);
                 let width = 1260 - margin.left - margin.right,
                     height = 420 - margin.top - margin.bottom;
 
@@ -490,10 +490,9 @@
                     .attr("transform", "translate(" + margin.left + "," + margin.top + "), scale(1,1)");
                 svg.svg = svg;
                 svg.g = g;
+
                 //
-                setSvdObject(cleanObject);
-                //
-                pageScatterPlotNew(cleanObject.svdOutPut, cleanObject.svdPages, svg);
+                pageScatterPlotNew(svdObject.svdOutPut, svdObject.svdPages, svg);
                 //render scatter plot block
                 ScatterPlot(data.sc_1, "scatterPlot_1", "crsVsCrv", block_width, block_height);
                 ScatterPlot(data.sc_1, "scatterPlot_2", "CrnVsCrm", block_width, block_height);
