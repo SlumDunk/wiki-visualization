@@ -1,5 +1,5 @@
 # Wikipedia-VEWS
-Research project - Dr.Aidong Lu - UNC Charlotte
+Research project - UNC Charlotte
 
 project structure:
 -application:the code about the application
